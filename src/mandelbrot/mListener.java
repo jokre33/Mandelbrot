@@ -33,8 +33,7 @@ public class mListener implements MouseListener {
             clicks = 0;
             System.out.println("x offset: " + this.x[0]);
             System.out.println("y offset: " + this.y[0]);
-            System.out.println("scale(x): " + diff(this.x[0], this.x[1]) + "x" + diff(this.x[0], this.x[1]) * Mandelbrot.YRes / Mandelbrot.XRes);
-            System.out.println("scale(y): " + diff(this.y[0], this.y[1]) * Mandelbrot.XRes / Mandelbrot.YRes + "x" + diff(this.y[0], this.y[1]));
+            System.out.println("scale: " + Math.max(diff(this.x[0], this.x[1]), diff(this.y[0], this.y[1]) * Mandelbrot.XRes / Mandelbrot.YRes));
         }
     }
 

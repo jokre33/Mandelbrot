@@ -20,15 +20,16 @@ import javax.swing.JPanel;
  */
 public class Mandelbrot {
 
-    public static final int XRes = 15000;            //Width of Image and Window
-    public static final int YRes = 10000;             //Height of Image and Window
-    public static final double xScale = 3.723125388498394E-4;
+    public static final int XRes = 1920;            //Width of Image and Window
+    public static final int YRes = 1080;             //Height of Image and Window
+    public static final double Scale = 3.723125388498394E-4;
     public static final double xOffset = -1.3931873958178334;
-    public static final double yScale = 2.4820835923322626E-4;
     public static final double yOffset = -0.007219406233900057;
+    public static final double xScale = Scale;
+    public static final double yScale = Scale / ((double)XRes / (double) YRes);
     public static final int Threads = 8;            //Number of Threads the Image generation should run
-    public static final boolean showImage = false;   //Should the image be displayed on screen (not recommended at resolutions higher than that of your monitor
-    public static final boolean saveImage = true;  //Should the image be saved to HDD?
+    public static final boolean showImage = true;   //Should the image be displayed on screen (not recommended at resolutions higher than that of your monitor
+    public static final boolean saveImage = false;  //Should the image be saved to HDD?
     public static final String imagePath = "image.png"; //Path to save the image to
     public static int[][][] iterationMerge = new int[Threads][XRes / Threads][YRes];
     public static boolean[] ready = new boolean[Threads + 1];
@@ -82,9 +83,10 @@ public class Mandelbrot {
             for (int j = 0; j < XRes / Threads; j++, j2++) {
                 for (int k = 0; k < YRes; k++) {
                     if (iterationMerge[i][j][k] < 256) {
-                        img.setRGB(j2, k, colorToRGB(255, 0, iterationMerge[i][j][k], 0));
+                        img.setRGB(j2, k, colorToRGB(255, 0, iterationMerge[i][j][k], iterationMerge[i][j][k]));
                     } else if (iterationMerge[i][j][k] < 512) {
-                        img.setRGB(j2, k, colorToRGB(255, 0, 255 - (iterationMerge[i][j][k] - 256), iterationMerge[i][j][k] - 256));
+                        img.setRGB(j2, k, colorToRGB(255, 0, 255 - (iterationMerge[i][j][k] - 256), 255));
+                        //img.setRGB(j2, k, colorToRGB(255, 255 - (iterationMerge[i][j][k] - 256), 255 - (iterationMerge[i][j][k] - 256), iterationMerge[i][j][k] - 256));
                     } else if (iterationMerge[i][j][k] < 768) {
                         img.setRGB(j2, k, colorToRGB(255, iterationMerge[i][j][k] - 512, iterationMerge[i][j][k] - 512, 255));
                     }
@@ -118,6 +120,7 @@ public class Mandelbrot {
 
     public Mandelbrot() {
         System.out.println("Resolution: " + XRes + "x" + YRes);
+        System.out.println("Scale: " + Scale + " (" + xScale + " " + yScale + ")");
 
         double x0 = 0;
         x0 /= Mandelbrot.XRes;
