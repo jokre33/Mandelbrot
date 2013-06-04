@@ -35,23 +35,25 @@ public class Mandelbrot {
     public static boolean[] ready = new boolean[Threads + 1];
     mathThread[] tSave = new mathThread[Threads];
     BufferedImage img = new BufferedImage(XRes, YRes, BufferedImage.TYPE_INT_RGB);
-    mListener mouse = new mListener();
+    mListener mouseListen = new mListener();
 
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         Mandelbrot mb = new Mandelbrot();
-        mb.runGeneration();
-        if (showImage) {
+        mb.runGeneration();         //create and run the calculation threads
+        if (showImage) {            //show the calculated image if requested
             mb.initFrame();
         }
-        if (saveImage) {
+        if (saveImage) {            //save the calculated image to the harddrive if requested
             mb.saveImage(imagePath);
         }
     }
 
     public void runGeneration() {
+        //Fill all requested Threads with information and start them!
+        //Set the ready state to false for all Threads
         for (int i = 0; i < Threads; i++) {
             tSave[i] = new mathThread(XRes, YRes, Threads, i);
             ready[i] = false;
@@ -59,6 +61,7 @@ public class Mandelbrot {
             tSave[i].start();
         }
 
+        //wait for the calculation threads
         while (!ready[Threads]) {
             try {
                 Thread.sleep(1000);
@@ -77,25 +80,36 @@ public class Mandelbrot {
             }
         }
 
+        //Create the actual image out of the calculated data
+        //Colors can be modified here!
+        //to avoid complications use a format like the following where no value should be over 255
+        //img.setRGB(j2, k, colorToRGB(255, <RED>, <GREEN>, <BLUE>));
+        //<im> is the iteration value use this to make color gradient
+        
         System.out.println("Creating Image...");
         int j2 = 0;
+        int im;
         for (int i = 0; i < Threads; i++) {
             for (int j = 0; j < XRes / Threads; j++, j2++) {
                 for (int k = 0; k < YRes; k++) {
-                    if (iterationMerge[i][j][k] < 256) {
-                        img.setRGB(j2, k, colorToRGB(255, 0, iterationMerge[i][j][k], iterationMerge[i][j][k]));
-                    } else if (iterationMerge[i][j][k] < 512) {
-                        img.setRGB(j2, k, colorToRGB(255, 0, 255 - (iterationMerge[i][j][k] - 256), 255));
-                        //img.setRGB(j2, k, colorToRGB(255, 255 - (iterationMerge[i][j][k] - 256), 255 - (iterationMerge[i][j][k] - 256), iterationMerge[i][j][k] - 256));
-                    } else if (iterationMerge[i][j][k] < 768) {
-                        img.setRGB(j2, k, colorToRGB(255, iterationMerge[i][j][k] - 512, iterationMerge[i][j][k] - 512, 255));
+                    //mix your colors here!
+                    im = iterationMerge[i][j][k];
+                    if (im < 256) {
+                        img.setRGB(j2, k, colorToRGB(255, 0, im, im));
+                    } else if (im < 512) {
+                        img.setRGB(j2, k, colorToRGB(255, 0, 255 - (im - 256), 255));
+                    } else if (im < 768) {
+                        img.setRGB(j2, k, colorToRGB(255, im - 512, im - 512, 255));
                     }
-                    //img.setRGB(j2, k, colorToRGB(255, iterationMerge[i][j][k] / 2, iterationMerge[i][j][k], iterationMerge[i][j][k] / 2));
                 }
             }
         }
     }
-
+    
+    /**
+     * save the image at the path
+     * @param path image will be saved here does not need a full path
+     */
     public void saveImage(String path) {
         try {
             System.out.println("Saving...");
@@ -106,6 +120,8 @@ public class Mandelbrot {
         }
     }
 
+    
+    //creates a window to display the image if requested
     public JFrame initFrame() {
         JFrame f = new JFrame();
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -114,35 +130,23 @@ public class Mandelbrot {
         f.setLocation((1920 - XRes) / 2, (1080 - YRes) / 2);
         f.add(new DrawPanel(img));
         f.setVisible(true);
-        f.addMouseListener(mouse);
+        f.addMouseListener(mouseListen);
         return f;
     }
 
     public Mandelbrot() {
         System.out.println("Resolution: " + XRes + "x" + YRes);
         System.out.println("Scale: " + Scale + " (" + xScale + " " + yScale + ")");
-
-        double x0 = 0;
-        x0 /= Mandelbrot.XRes;
-        x0 *= Mandelbrot.xScale;
-        x0 += Mandelbrot.xOffset;
-        double y0 = 0;
-        y0 /= Mandelbrot.YRes;
-        y0 *= Mandelbrot.yScale;
-        y0 += Mandelbrot.yOffset;
-
-        double x1 = XRes;
-        x1 /= Mandelbrot.XRes;
-        x1 *= Mandelbrot.xScale;
-        x1 += Mandelbrot.xOffset;
-        double y1 = YRes;
-        y1 /= Mandelbrot.YRes;
-        y1 *= Mandelbrot.yScale;
-        y1 += Mandelbrot.yOffset;
-
-        System.out.println(x0 + " " + y0 + "\n" + x1 + " " + y1);
     }
 
+    /**
+     * sorts the 4 color values into one rbg int
+     * @param alpha the visibility of the pixel
+     * @param red   the amount of red in the pixel
+     * @param green the amount of green in the pixel
+     * @param blue  the amount of blue in the pixel
+     * @return  the rbg int sorted into 2 bytes alpha, red, green, blue
+     */
     private static int colorToRGB(int alpha, int red, int green, int blue) {
 
         int newPixel = 0;
