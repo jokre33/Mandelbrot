@@ -20,20 +20,21 @@ import javax.swing.JPanel;
  */
 public class Mandelbrot {
 
-    public static final int XRes = 1920;            //Width of Image and Window
-    public static final int YRes = 1080;             //Height of Image and Window
-    public static final double Scale = 3.723125388498394E-4;
-    public static final double xOffset = -1.3931873958178334;
-    public static final double yOffset = -0.007219406233900057;
+    public static final int XRes = 32768;            //Width of Image and Window must be a multiple of 256
+    public static final int YRes = 32768;             //Height of Image and Window must be a multiple of 256
+    public static final double Scale = 4.009806043425712E-5;
+    public static final double xOffset = -1.3930812316420054;
+    public static final double yOffset = -0.007075629059730615;
     public static final double xScale = Scale;
-    public static final double yScale = Scale / ((double)XRes / (double) YRes);
+    public static final double yScale = Scale / ((double) XRes / (double) YRes);
     public static final int Threads = 8;            //Number of Threads the Image generation should run
-    public static final boolean showImage = true;   //Should the image be displayed on screen (not recommended at resolutions higher than that of your monitor
-    public static final boolean saveImage = false;  //Should the image be saved to HDD?
+    public static final boolean showImage = false;   //Should the image be displayed on screen (not recommended at resolutions higher than that of your monitor
+    public static final boolean saveImage = true;  //Should the image be saved to HDD?
     public static final String imagePath = "image.png"; //Path to save the image to
-    public static int[][][] iterationMerge = new int[Threads][XRes / Threads][YRes];
-    public static boolean[] ready = new boolean[Threads + 1];
-    mathThread[] tSave = new mathThread[Threads];
+    //public static int[][][] iterationMerge = new int[Threads][XRes / Threads][YRes];
+    public static int[][][] iterationMerge = new int[Threads][256][256];
+    public static int[] ready = new int[Threads + 1];
+    renderThread[] tSave = new renderThread[Threads];
     BufferedImage img = new BufferedImage(XRes, YRes, BufferedImage.TYPE_INT_RGB);
     mListener mouseListen = new mListener();
 
@@ -52,62 +53,100 @@ public class Mandelbrot {
     }
 
     public void runGeneration() {
-        //Fill all requested Threads with information and start them!
-        //Set the ready state to false for all Threads
+        int ThreadNumber = Threads;
         for (int i = 0; i < Threads; i++) {
-            tSave[i] = new mathThread(XRes, YRes, Threads, i);
-            ready[i] = false;
-            tSave[i].setScaleOffset(xScale, yScale, xOffset, yOffset);
-            tSave[i].start();
-        }
-
-        //wait for the calculation threads
-        while (!ready[Threads]) {
-            try {
-                Thread.sleep(1000);
-                int readyInt = 0;
-                for (int i = 0; i < Threads; i++) {
-                    if (ready[i]) {
-                        readyInt++;
+            int tx = i * 256;
+            int ty = 0;
+            boolean ready = false;
+            while (!ready) {
+                if (tx < XRes) {
+                    tSave[i] = new renderThread(tx, ty, XRes, YRes, i);
+                    ready = true;
+                } else {
+                    tx -= XRes;
+                    ty += 256;
+                    if (ty >= YRes) {
+                        ThreadNumber = i;
+                        break;
                     }
                 }
-                System.out.println(readyInt + " Threads ready!");
-                if (readyInt == Threads) {
-                    ready[Threads] = true;
-                }
-            } catch (InterruptedException ex) {
-                Logger.getLogger(Mandelbrot.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
 
-        //Create the actual image out of the calculated data
-        //Colors can be modified here!
-        //to avoid complications use a format like the following where no value should be over 255
-        //img.setRGB(j2, k, colorToRGB(255, <RED>, <GREEN>, <BLUE>));
-        //<im> is the iteration value use this to make color gradient
-        
-        System.out.println("Creating Image...");
-        int j2 = 0;
-        int im;
+        int readyState[] = new int[Threads];
         for (int i = 0; i < Threads; i++) {
-            for (int j = 0; j < XRes / Threads; j++, j2++) {
-                for (int k = 0; k < YRes; k++) {
-                    //mix your colors here!
-                    im = iterationMerge[i][j][k];
-                    if (im < 256) {
-                        img.setRGB(j2, k, colorToRGB(255, 0, im, im));
-                    } else if (im < 512) {
-                        img.setRGB(j2, k, colorToRGB(255, 0, 255 - (im - 256), 255));
-                    } else if (im < 768) {
-                        img.setRGB(j2, k, colorToRGB(255, im - 512, im - 512, 255));
-                    }
+            readyState[i] = -1;
+        }
+        for (int i = 0; i < Threads + 1; i++) {
+            ready[i] = 0;
+        }
+
+        while (ready[Threads] == 0) {
+            for (int i = 0; i < Threads; i++) {
+                if (ready[i] > readyState[i]) {
+                    tSave[i].setOffset((ready[i] * 8 * 256 + i * 256) % XRes, ((ready[i] * 8 * 256 + i * 256) - ((ready[i] * 8 * 256 + i * 256) % XRes)) / XRes);
                 }
             }
         }
     }
-    
+
+    /* public void runGeneration() {
+     //Fill all requested Threads with information and start them!
+     //Set the ready state to false for all Threads
+     for (int i = 0; i < Threads; i++) {
+     tSave[i] = new mathThread(XRes, YRes, Threads, i);
+     ready[i] = false;
+     tSave[i].setScaleOffset(xScale, yScale, xOffset, yOffset);
+     tSave[i].start();
+     }
+
+     //wait for the calculation threads
+     while (!ready[Threads]) {
+     try {
+     Thread.sleep(1000);
+     int readyInt = 0;
+     for (int i = 0; i < Threads; i++) {
+     if (ready[i]) {
+     readyInt++;
+     }
+     }
+     System.out.println(readyInt + " Threads ready!");
+     if (readyInt == Threads) {
+     ready[Threads] = true;
+     }
+     } catch (InterruptedException ex) {
+     Logger.getLogger(Mandelbrot.class.getName()).log(Level.SEVERE, null, ex);
+     }
+     }
+
+     //Create the actual image out of the calculated data
+     //Colors can be modified here!
+     //to avoid complications use a format like the following where no value should be over 255
+     //img.setRGB(j2, k, colorToRGB(255, <RED>, <GREEN>, <BLUE>));
+     //<im> is the iteration value use this to make color gradient
+        
+     System.out.println("Creating Image...");
+     int j2 = 0;
+     int im;
+     for (int i = 0; i < Threads; i++) {
+     for (int j = 0; j < XRes / Threads; j++, j2++) {
+     for (int k = 0; k < YRes; k++) {
+     //mix your colors here!
+     im = iterationMerge[i][j][k];
+     if (im < 256) {
+     img.setRGB(j2, k, colorToRGB(255, 0, im, im));
+     } else if (im < 512) {
+     img.setRGB(j2, k, colorToRGB(255, 0, 255 - (im - 256), 255));
+     } else if (im < 768) {
+     img.setRGB(j2, k, colorToRGB(255, im - 512, im - 512, 255));
+     }
+     }
+     }
+     }
+     } */
     /**
      * save the image at the path
+     *
      * @param path image will be saved here does not need a full path
      */
     public void saveImage(String path) {
@@ -120,7 +159,6 @@ public class Mandelbrot {
         }
     }
 
-    
     //creates a window to display the image if requested
     public JFrame initFrame() {
         JFrame f = new JFrame();
@@ -141,11 +179,12 @@ public class Mandelbrot {
 
     /**
      * sorts the 4 color values into one rbg int
+     *
      * @param alpha the visibility of the pixel
-     * @param red   the amount of red in the pixel
+     * @param red the amount of red in the pixel
      * @param green the amount of green in the pixel
-     * @param blue  the amount of blue in the pixel
-     * @return  the rbg int sorted into 2 bytes alpha, red, green, blue
+     * @param blue the amount of blue in the pixel
+     * @return the rbg int sorted into 2 bytes alpha, red, green, blue
      */
     private static int colorToRGB(int alpha, int red, int green, int blue) {
 

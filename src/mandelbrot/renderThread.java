@@ -8,63 +8,63 @@ package mandelbrot;
  *
  * @author Max
  */
-public class mathThread extends Thread {
+public class renderThread extends Thread {
 
     int xRes;
     int yRes;
-    int Threads;
+    int renderXRes;
+    int renderYRes;
+    int renderXOffset;
+    int renderYOffset;
     int ThreadNumber;
-    
     double xOffset;
     double yOffset;
     double xScale;
     double yScale;
 
-    /**
-     * Initializes the calculation threads
-     * @param XRes          requested X-resolution for proper scaling
-     * @param YRes          requested Y-resolution
-     * @param Threads       number of total threads in use to determine what should be calculated
-     * @param ThreadNumber  number of this thread (starts @ 0)
-     */
-    
-    public mathThread(int XRes, int YRes, int Threads, int ThreadNumber) {
-        this.xRes = XRes;
-        this.yRes = YRes;
-        this.Threads = Threads;
+    public renderThread(int xOffset, int y‎Offset, int originalXRes, int originalYRes, int ThreadNumber) {
+        this.xRes = originalXRes;
+        this.yRes = originalYRes;
+        this.renderXRes = 256;
+        this.renderYRes = 256;
+        this.renderXOffset = xOffset;
+        this.renderYOffset = y‎Offset;
         this.ThreadNumber = ThreadNumber;
         this.xOffset = 1.5;     //standard offset if nothing else is specified displays the full mandelbrot @ 1:1 resolution
-        this.yOffset = 1;    
+        this.yOffset = 1;
         this.xScale = 2;        //standard scale to display the full mandelbrot @ 1:1 resolution
-        this.yScale = this.xScale * YRes / XRes;
+        this.yScale = this.xScale * originalYRes / originalXRes;
     }
-    
+
     /**
      * function to manually set the X and Y offsets
+     *
      * @param xOffset
-     * @param yOffset 
+     * @param yOffset
      */
     public void setOffset(double xOffset, double yOffset) {
         this.xOffset = xOffset;
         this.yOffset = yOffset;
     }
-    
+
     /**
      * function to manually set X and Y scaling
+     *
      * @param xScale
-     * @param yScale 
+     * @param yScale
      */
     public void setScale(double xScale, double yScale) {
         this.xScale = xScale;
         this.yScale = yScale;
     }
-    
+
     /**
      * function to manually set X and Y offset and scaling
+     *
      * @param xScale
      * @param yScale
      * @param xOffset
-     * @param yOffset 
+     * @param yOffset
      */
     public void setScaleOffset(double xScale, double yScale, double xOffset, double yOffset) {
         this.xScale = xScale;
@@ -73,11 +73,16 @@ public class mathThread extends Thread {
         this.yOffset = yOffset;
     }
     
+    public void setRenderOffset(int xOffset, int yOffset) {
+        this.renderXOffset = xOffset;
+        this.renderYOffset = yOffset;
+    }
+
     //Magic. Do not touch.
     @Override
     public void run() {
-        for (int i = xRes / this.Threads * this.ThreadNumber; i < xRes / this.Threads * (this.ThreadNumber + 1); i++) {
-            for (int j = 0; j < yRes; j++) {
+        for (int i = this.renderXOffset; i < this.renderXOffset + this.renderXRes; i++) {
+            for (int j = this.renderYOffset; j < this.renderYOffset + this.renderYRes; j++) {
                 double x0 = i;
                 x0 /= this.xRes;
                 x0 *= this.xScale;
@@ -99,7 +104,7 @@ public class mathThread extends Thread {
                     x = xtemp;
                     it++;
                 }
-                Mandelbrot.iterationMerge[this.ThreadNumber][i - (xRes / this.Threads * this.ThreadNumber)][j] = it;
+                Mandelbrot.iterationMerge[this.ThreadNumber][i - this.renderXOffset][j - this.renderYOffset] = it;
             }
         }
         Mandelbrot.ready[this.ThreadNumber]++;
